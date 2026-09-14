@@ -8,7 +8,8 @@ import (
 )
 
 var (
-	pollFreq = (3 * time.Second)
+	pollFreq  = (10 * time.Second)
+	eventChan = make(chan struct{}, 2)
 
 	sensors = input.SensorCluster{
 		input.Sensor{
@@ -23,8 +24,7 @@ var (
 			MinRange: 320,
 		},
 	}
-
-	eventChan = make(chan struct{}, 2)
+	pushButton = machine.Pin(13)
 )
 
 func main() {
@@ -40,6 +40,8 @@ func main() {
 			eventChan <- struct{}{}
 		}
 	}()
+
+	go input.MomentaryTrigger(pushButton, eventChan)
 
 	for range eventChan {
 		sensors.Poll()
