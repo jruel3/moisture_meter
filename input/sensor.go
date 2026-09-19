@@ -3,9 +3,8 @@ package input
 
 import (
 	"bytes"
-	"encoding/json"
-	"fmt"
 	"machine"
+	"strconv"
 	"time"
 )
 
@@ -24,18 +23,21 @@ type Sensor struct {
 }
 
 // Type SensorCluster represents a slice of Sensors
-type SensorCluster []Sensor
+type SensorCluster struct {
+	Sensors    []Sensor
+	ManualPoll bool
+}
 
 // Check a cluster for errors and print them to console.
 // Returns a bool (true if an error is found).
 func (sc SensorCluster) CheckErr(message string) bool {
 	errFound := false
-	for _, s := range sc {
+	for _, s := range sc.Sensors {
 		if s.Err != nil {
 			if !errFound {
 				println(message)
 			}
-			println(fmt.Sprintf("{%s: Raw_Value: %v, Error: %v}\n", s.Name, s.RawValue, s.Err))
+			print("{", s.Name, ": Raw_Value: ", s.RawValue, ", Error: ", s.Err.Error(), "}\n")
 			errFound = true
 		}
 	}
@@ -50,9 +52,9 @@ func (s *Sensor) init() {
 }
 
 // Initialize I2C pins in a cluster
-func (sc SensorCluster) Init() {
-	for i := range sc {
-		sc[i].init()
+func (sc *SensorCluster) Init() {
+	for i := range sc.Sensors {
+		sc.Sensors[i].init()
 	}
 }
 
@@ -61,20 +63,27 @@ func (sc SensorCluster) Init() {
 func (sc SensorCluster) JSON() ([]byte, error) {
 	var buf bytes.Buffer
 
-	buf.WriteByte('{')
+	buf.WriteString(`{"sensors":[`)
 
-	for i, s := range sc {
-		b, err := json.Marshal(s)
-		if err != nil {
-			return nil, err
-		}
-		buf.Write(b)
+	for i, s := range sc.Sensors {
+		buf.WriteString(`{"Name":"`)
+		buf.WriteString(s.Name)
+		buf.WriteString(`","MaxRange":`)
+		buf.WriteString(strconv.FormatFloat(float64(s.MaxRange), 'f', 2, 32))
+		buf.WriteString(`,"MinRange":`)
+		buf.WriteString(strconv.FormatFloat(float64(s.MinRange), 'f', 2, 32))
+		buf.WriteString(`,"RawValue":`)
+		buf.WriteString(strconv.FormatUint(uint64(s.RawValue), 10))
+		buf.WriteString(`,"NormValue":`)
+		buf.WriteString(strconv.FormatFloat(float64(s.NormValue), 'f', 2, 32))
+		buf.WriteByte('}')
 
-		if i < len(sc)-1 {
+		if i < len(sc.Sensors)-1 {
 			buf.WriteByte(',')
 		}
 	}
-
+	buf.WriteString(`],"manual_poll":`)
+	buf.WriteString(strconv.FormatBool(sc.ManualPoll))
 	buf.WriteByte('}')
 	return buf.Bytes(), nil
 }
@@ -102,11 +111,17 @@ func (s *Sensor) poll() {
 }
 
 // Polls the Sensors in the SensorCluster and sets their values
-func (sc SensorCluster) Poll() {
-	for i := range sc {
-		sc[i].poll()
+// Defaults the ManualPoll bool to false
+func (sc *SensorCluster) Poll() {
+	sc.ManPoll(false)
+}
+
+func (sc *SensorCluster) ManPoll(manualPoll bool) {
+	for i := range sc.Sensors {
+		sc.Sensors[i].poll()
 		time.Sleep(5 * time.Millisecond)
 	}
+	sc.ManualPoll = manualPoll
 }
 
 // Reregister the sensor's address on the I2C bus.
@@ -139,8 +154,9 @@ func (s *Sensor) resetVals() {
 }
 
 // Reset value and err fields in Sensors in a cluster
-func (sc SensorCluster) ResetVals() {
-	for i := range sc {
-		sc[i].resetVals()
+func (sc *SensorCluster) ResetVals() {
+	for i := range sc.Sensors {
+		sc.Sensors[i].resetVals()
 	}
+	sc.ManualPoll = false
 }

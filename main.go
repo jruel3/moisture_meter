@@ -9,20 +9,23 @@ import (
 
 var (
 	pollFreq  = (10 * time.Second)
-	eventChan = make(chan struct{}, 2)
+	eventChan = make(chan bool, 2)
 
 	sensors = input.SensorCluster{
-		input.Sensor{
-			Name:       "Moisture Meter 1",
-			MachinePin: machine.I2C0,
-			PinConfig: machine.I2CConfig{
-				Frequency: 100 * machine.KHz,
+		Sensors: []input.Sensor{
+			input.Sensor{
+				Name:       "Moisture Meter 1",
+				MachinePin: machine.I2C0,
+				PinConfig: machine.I2CConfig{
+					Frequency: 100 * machine.KHz,
+				},
+				Address:  0x36,
+				WriteBuf: []byte{0x0F, 0x10},
+				MaxRange: 1025,
+				MinRange: 320,
 			},
-			Address:  0x36,
-			WriteBuf: []byte{0x0F, 0x10},
-			MaxRange: 1025,
-			MinRange: 320,
 		},
+		ManualPoll: false,
 	}
 	pushButton = machine.Pin(13)
 )
@@ -37,14 +40,14 @@ func main() {
 	defer ticker.Stop()
 	go func() {
 		for range ticker.C {
-			eventChan <- struct{}{}
+			eventChan <- false
 		}
 	}()
 
 	go input.MomentaryTrigger(pushButton, eventChan)
 
-	for range eventChan {
-		sensors.Poll()
+	for manPoll := range eventChan {
+		sensors.ManPoll(manPoll)
 		if err := sensors.CheckErr("Error polling sensors: "); err {
 			return
 		}

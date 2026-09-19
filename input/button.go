@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-// MomentaryTrigger sends an event for a pin trigger.
-func MomentaryTrigger(pin machine.Pin, eventChan chan struct{}) {
+// MomentaryTrigger sends a true bool event for a pin trigger.
+func MomentaryTrigger(pin machine.Pin, eventChan chan bool) {
 	pin.Configure(machine.PinConfig{Mode: machine.PinInputPullup})
 	lastState := true
 
@@ -18,9 +18,9 @@ func MomentaryTrigger(pin machine.Pin, eventChan chan struct{}) {
 			if !pin.Get() {
 				println("<<< Button Press >>>")
 				select {
-				case eventChan <- struct{}{}:
+				case eventChan <- true:
 				default:
-					println("Default Case")
+					println("Chan Full")
 				}
 			}
 		}
