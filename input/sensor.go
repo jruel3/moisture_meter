@@ -19,6 +19,7 @@ type Sensor struct {
 	MinRange   float32
 	RawValue   uint16
 	NormValue  float32
+	AlertValue float32
 	Err        error
 }
 

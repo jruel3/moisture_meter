@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"moisture_meter/input"
+	"moisture_meter/output"
 )
 
 var (
@@ -28,6 +29,7 @@ var (
 		ManualPoll: false,
 	}
 	pushButton = machine.Pin(13)
+	led        = output.LED{Pin: machine.Pin(12)}
 )
 
 func main() {
@@ -35,6 +37,7 @@ func main() {
 	if err := sensors.CheckErr("Encountered an error initializing sensor cluster."); err {
 		return
 	}
+	led.Init()
 
 	ticker := time.NewTicker(pollFreq)
 	defer ticker.Stop()
@@ -50,6 +53,17 @@ func main() {
 		sensors.ManPoll(manPoll)
 		if err := sensors.CheckErr("Error polling sensors: "); err {
 			return
+		}
+		var alert = false
+		for _, v := range sensors.Sensors {
+			if v.NormValue < v.AlertValue {
+				alert = true
+			}
+		}
+		if alert {
+			led.On()
+		} else {
+			led.Off()
 		}
 		resp, err := sensors.JSON()
 		if err != nil {
