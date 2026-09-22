@@ -77,6 +77,8 @@ func (sc SensorCluster) JSON() ([]byte, error) {
 		buf.WriteString(strconv.FormatUint(uint64(s.RawValue), 10))
 		buf.WriteString(`,"NormValue":`)
 		buf.WriteString(strconv.FormatFloat(float64(s.NormValue), 'f', 2, 32))
+		buf.WriteString(`,"AlertValue":`)
+		buf.WriteString(strconv.FormatFloat(float64(s.AlertValue), 'f', 2, 32))
 		buf.WriteByte('}')
 
 		if i < len(sc.Sensors)-1 {

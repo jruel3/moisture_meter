@@ -20,16 +20,17 @@ var (
 				PinConfig: machine.I2CConfig{
 					Frequency: 100 * machine.KHz,
 				},
-				Address:  0x36,
-				WriteBuf: []byte{0x0F, 0x10},
-				MaxRange: 1025,
-				MinRange: 320,
+				Address:    0x36,
+				WriteBuf:   []byte{0x0F, 0x10},
+				MaxRange:   1025,
+				MinRange:   320,
+				AlertValue: 25,
 			},
 		},
 		ManualPoll: false,
 	}
 	pushButton = machine.Pin(13)
-	led        = output.LED{Pin: machine.Pin(12)}
+	led        = output.LED{Pin: machine.Pin(4)}
 )
 
 func main() {
